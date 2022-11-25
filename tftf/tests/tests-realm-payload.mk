@@ -21,5 +21,4 @@ TESTS_SOURCES	+=							\
 		test_ffa_setup_and_discovery.c				\
 		test_spm_cpu_features.c					\
 		test_spm_smmu.c						\
-		${ARCH}/ffa_arch_helpers.S \
 	)
