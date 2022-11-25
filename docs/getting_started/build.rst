@@ -51,7 +51,6 @@ Building TF-A Tests
       -  ``build/<platform>/<build-type>/cactus_mm.bin``
       -  ``build/<platform>/<build-type>/cactus.bin``
       -  ``build/<platform>/<build-type>/ivy.bin``
-      -  ``build/<platform>/<build-type>/quark.bin``
 
       where ``<platform>`` is the name of the chosen platform and ``<build-type>``
       is either ``debug`` or ``release``. The actual number of images might differ
@@ -102,6 +101,26 @@ command from the TF-A root directory:
     BL33=<path/to/tftf.bin> make PLAT=<platform> fip
 
 Please refer to the `TF-A documentation`_ for further details.
+
+Realm payload test image
+````````````````````````
+
+``realm.bin`` is the realm payload test image and is packaged along with
+tftf for Realm Management Extension (RME) testing. This can be built using
+the following command:
+
+::
+
+    make PLAT=<platform> realm
+
+The generated ``realm.bin`` needs to be packaged as part of ``tftf.bin`` to
+be used as a single BL33 image and can be done using the following command:
+
+::
+
+    make PLAT=<platform> pack_realm
+
+Please refer to the `TF-A RME documentation`_ for build and run instructions.
 
 NS_BL1U and NS_BL2U test images
 ```````````````````````````````
@@ -311,6 +330,7 @@ To build TFTF with SPM tests, Cactus and Ivy use:
 .. _Arm Management Mode Interface: https://developer.arm.com/documentation/den0060/a/
 .. _Arm Firmware Framework for Armv8-A: https://developer.arm.com/docs/den0077/latest
 .. _TF-A documentation: https://trustedfirmware-a.readthedocs.org
+.. _TF-A RME documentation: https://trustedfirmware-a.readthedocs.io/en/latest/components/realm-management-extension.html
 .. _TF-A Secure Partition Manager (FF-A): https://trustedfirmware-a.readthedocs.io/en/latest/components/secure-partition-manager.html
 .. _TF-A Secure Partition Manager (MM): https://trustedfirmware-a.readthedocs.io/en/latest/components/secure-partition-manager-mm.html
 .. _Building TF-A Secure Partition Manager (MM): https://trustedfirmware-a.readthedocs.io/en/latest/components/secure-partition-manager-mm.html#building-tf-a-with-secure-partition-support
