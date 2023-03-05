@@ -9,7 +9,7 @@
 <testsuites>
   <testsuite name="Realm payload at EL1" description="Test Realm EL1 framework capabilities" >
 	  <testcase name="Realm EL1 creation and execution test"
-	  function="test_realm_create_enter" />
+	  function="test_realm_create_enter" /> 
 	  <testcase name="Realm payload boot"
 	  function="realm_version_single_cpu" />
 	  <testcase name="Realm payload multi CPU request"
@@ -20,5 +20,7 @@
 	  function="realm_delundel_multi_cpu" />
 	  <testcase name="Testing delegation fails"
 	  function="realm_fail_del" />
+	  <testcase name="Realm payload Delegate Dev mem"
+	  function="test_realm_create_dev_mem" />
   </testsuite>
 </testsuites>

@@ -6,7 +6,6 @@
  */
 
 #include <string.h>
-
 #include <debug.h>
 #include <heap/page_alloc.h>
 #include <host_realm_helper.h>
@@ -16,8 +15,9 @@
 #include <realm_def.h>
 #include <tftf_lib.h>
 
+#define LIMBS(dst) dst&0xFF, (dst >> 8) & 0xFF, (dst >> 16) & 0xFF, (dst >> 24) & 0xFF, (dst >> 32) & 0xFF, (dst >> 40) & 0xFF, (dst >> 48) & 0xFF, (dst >> 56) & 0xFF
 static inline u_register_t rmi_data_create(bool unknown, u_register_t data,
-		u_register_t rd, u_register_t map_addr, u_register_t src)
+		u_register_t rd, u_register_t map_addr, u_register_t src, unsigned long flags)
 {
 	if (unknown) {
 		return ((smc_ret_values)(tftf_smc(&(smc_args)
@@ -25,7 +25,7 @@ static inline u_register_t rmi_data_create(bool unknown, u_register_t data,
 			0UL, 0UL, 0UL, 0UL}))).ret0;
 	} else {
 		return ((smc_ret_values)(tftf_smc(&(smc_args) {RMI_DATA_CREATE,
-			data, rd, map_addr, src, 0UL, 0UL, 0UL}))).ret0;
+			data, rd, map_addr, src, flags, 0UL, 0UL}))).ret0;
 	}
 }
 
@@ -237,11 +237,12 @@ static u_register_t realm_fold_rtt(u_register_t rd, u_register_t addr,
 
 }
 
-static u_register_t realm_map_protected_data(bool unknown, struct realm *realm,
+static u_register_t realm_map_protected_data_flags(bool unknown, struct realm *realm,
 	u_register_t target_pa,
 	u_register_t map_size,
-	u_register_t src_pa)
+	u_register_t src_pa,  unsigned long flags)
 {
+
 	u_register_t rd = realm->rd;
 	u_register_t map_level, level;
 	u_register_t ret = 0UL;
@@ -291,7 +292,8 @@ static u_register_t realm_map_protected_data(bool unknown, struct realm *realm,
 			return REALM_ERROR;
 		}
 
-		ret = rmi_data_create(unknown, phys, rd, map_addr, src_pa);
+		ret = rmi_data_create(unknown, phys, rd, map_addr, src_pa, flags);
+		// ERROR("PA %llx map_addr %llx \n", phys, map_addr);
 
 		if (RMI_RETURN_STATUS(ret) == RMI_ERROR_RTT) {
 			/* Create missing RTTs and retry */
@@ -305,11 +307,11 @@ static u_register_t realm_map_protected_data(bool unknown, struct realm *realm,
 				goto err;
 			}
 
-			ret = rmi_data_create(unknown, phys, rd, map_addr, src_pa);
+			ret = rmi_data_create(unknown, phys, rd, map_addr, src_pa, flags);
 		}
 
 		if (ret != RMI_SUCCESS) {
-			ERROR("rmi_data_create failed, ret=0x%lx\n", ret);
+			ERROR("rmi_data_create failed, ret=0x%lx size=%lu map_size=%lu\n", ret, size, map_size);
 			goto err;
 		}
 
@@ -352,6 +354,13 @@ err:
 
 	return REALM_ERROR;
 }
+static u_register_t realm_map_protected_data(bool unknown, struct realm *realm,
+	u_register_t target_pa,
+	u_register_t map_size,
+	u_register_t src_pa){
+		return realm_map_protected_data_flags(unknown, realm, target_pa, map_size, src_pa, 0UL);
+	}
+
 
 u_register_t realm_map_unprotected(struct realm *realm,
 	u_register_t ns_pa,
@@ -665,6 +674,45 @@ err_free_par:
 	return REALM_ERROR;
 }
 
+//Pertie
+void make_dev_data(u_register_t dst, u_register_t src, u_register_t ipa[6], u_register_t pa[6]){
+	/*
+	device id : 8 bytes (0x00 0x00 device id (2 bytes) vendor id (2 bytes) bus number (2 bytes))
+	pci_config_addr : 8 bytes (this is the destination pa[dst] of the data create)
+	stream id : 4 bytes (TODO[Supraja]: check with SMMU impl to see what to set this to)
+	size1 - size 6 : 4 bytes each (sizes of bar regions)
+	reserved : 4 bytes 
+	ipa - pa pairs : regions in memory to map the bars to and set in pcie configuration ()
+	*/
+	char src_data[]={0x00, 0x00, 0x02, 0x00, 
+					0x03, 0x00, 0x04, 0x00,
+					LIMBS(dst),
+					// dst&0xFF, (dst >> 8) & 0xFF, (dst >> 16) & 0xFF, (dst >> 24) & 0xFF,  
+					// (dst >> 32) & 0xFF, (dst >> 40) & 0xFF, (dst >> 48) & 0xFF, (dst >> 56) & 0xFF,
+					0x00, 0x00, 0x00, 0x00, //Stream id 
+					0x00, 0x00, 0x10, 0x00,//size 1 4KB
+					0x00, 0x00, 0x10, 0x00,
+					0x00, 0x00, 0x10, 0x00,
+					0x00, 0x00, 0x10, 0x00,
+					0x00, 0x00, 0x10, 0x00,
+					0x00, 0x00, 0x10, 0x00, //size 6
+					0x00, 0x00, 0x00, 0x00, //reserved
+					LIMBS(ipa[0]), LIMBS(pa[0]),
+					LIMBS(ipa[1]), LIMBS(pa[1]),
+					LIMBS(ipa[2]), LIMBS(pa[2]),
+					LIMBS(ipa[3]), LIMBS(pa[3]),
+					LIMBS(ipa[4]), LIMBS(pa[4]),
+					LIMBS(ipa[5]), LIMBS(pa[5])
+					};
+	memcpy((char *)src, src_data, 144);
+	// for(int i = 8; i <= 15; i++){
+	// 	ERROR("data %d %x %x \n", i, ((char *)src)[i], src_data[i]);
+	// }
+	// for(int i = 48; i <= 144; i++){
+	// 	ERROR("data %d %x %x \n", i, ((char *)src)[i], src_data[i]);
+	// }
+}
+
 u_register_t realm_map_payload_image(struct realm *realm,
 	u_register_t realm_payload_adr)
 {
@@ -673,7 +721,7 @@ u_register_t realm_map_payload_image(struct realm *realm,
 	u_register_t ret;
 
 	/* MAP image regions */
-	while (i < (realm->par_size / PAGE_SIZE)) {
+	while (i < (realm->par_size / PAGE_SIZE)-1) {
 		ret =	realm_map_protected_data(false, realm,
 				realm->par_base + i * PAGE_SIZE,
 				PAGE_SIZE,
@@ -686,9 +734,24 @@ u_register_t realm_map_payload_image(struct realm *realm,
 		}
 		i++;
 	}
+	u_register_t pa[6], ipa[6];
+
+	u_register_t k = i-1;
+	for (u_register_t j = 0; j < 6; j++){
+		pa[j] = realm->par_base + k * PAGE_SIZE;
+		ipa[j] = src_pa + k * PAGE_SIZE;
+		k--;
+	}
+	u_register_t dev_granule_addr = src_pa + i * PAGE_SIZE;
+	make_dev_data(realm->par_base + i * PAGE_SIZE,dev_granule_addr,ipa,pa);
+	ret = realm_map_protected_data_flags(false, realm,
+				realm->par_base + i * PAGE_SIZE,
+				PAGE_SIZE,
+				src_pa + i * PAGE_SIZE, 2UL);
 
 	return REALM_SUCCESS;
 }
+
 
 u_register_t realm_init_ipa_state(struct realm *realm,
 		u_register_t level,

@@ -307,3 +307,8 @@ bool host_enter_realm_execute(uint8_t cmd)
 		test_result);
 	return false;
 }
+
+bool host_set_dev_mem_addr(){
+	INFO("[NOTE] This address is hardcoded \n Host dev ipa is %llx \n", 0x88bfc000);  //realm.par_base + (realm.par_size / PAGE_SIZE)-2 * PAGE_SIZE);
+	realm_shared_data_set_host_val(HOST_SLEEP_INDEX, 0x88bfc000);//realm.par_base + (realm.par_size / PAGE_SIZE)-2 * PAGE_SIZE);
+}

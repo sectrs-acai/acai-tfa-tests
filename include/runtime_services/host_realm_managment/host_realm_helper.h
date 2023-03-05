@@ -17,6 +17,6 @@ bool host_create_shared_mem(
 		u_register_t ns_shared_mem_size);
 bool host_destroy_realm(void);
 bool host_enter_realm_execute(uint8_t cmd);
-
+bool host_set_dev_mem_addr();
 #endif /* HOST_REALM_HELPER_H */
 

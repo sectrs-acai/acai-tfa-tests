@@ -98,6 +98,8 @@ struct rsi_host_call {
  */
 #define RSI_HOST_CALL		SMC_RSI_FID(9U)
 
+#define RSI_DEV_MEM		SMC_RSI_FID(U(0xA))
+
 
 #define RSI_ABI_VERSION		SMC_RSI_FID(0U)
 /*

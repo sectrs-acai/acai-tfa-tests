@@ -39,7 +39,8 @@ typedef struct host_shared_data {
  */
 enum realm_cmd {
 	REALM_SLEEP_CMD = 1U,
-	REALM_GET_RSI_VERSION
+	REALM_GET_RSI_VERSION,
+	REALM_RSI_DEV_MEM
 };
 
 /*
@@ -47,7 +48,8 @@ enum realm_cmd {
  */
 enum host_param_index {
 	HOST_CMD_INDEX = 0U,
-	HOST_SLEEP_INDEX
+	HOST_SLEEP_INDEX,
+	HOST_DEV_IPA
 };
 /*
  * Return shared buffer pointer mapped as host_shared_data_t structure

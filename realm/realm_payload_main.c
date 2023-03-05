@@ -26,6 +26,25 @@ static void realm_sleep_cmd(void)
 	waitms(sleep);
 }
 
+/* This function is used to issue the RSI to delegate device memory  */
+u_register_t rsi_delegate_dev_mem()
+{
+	smc_ret_values res = {};
+	uint64_t addr = realm_shared_data_get_host_val(HOST_SLEEP_INDEX);
+	INFO("REALM_PAYLOAD: Creating dev mem at %llx\n", addr);
+
+	res = tftf_smc(&(smc_args)
+		{RSI_DEV_MEM,(u_register_t)addr, 1UL, 2UL, 0UL, 0UL, 0UL, 0UL}); //delegate 2 granules starting at addr
+	INFO("Delegated Dev mem \n");
+
+	res = tftf_smc(&(smc_args)
+		{RSI_DEV_MEM,(u_register_t)addr, 0UL, 2UL, 0UL, 0UL, 0UL, 0UL}); //undelegate 2 granules starting at addr
+	INFO("UnDelegated Dev mem \n");
+
+	return res.ret0;
+}
+
+
 /*
  * This function requests RSI/ABI version from RMM.
  */
@@ -45,6 +64,7 @@ static void realm_get_rsi_version(void)
 	RSI_ABI_VERSION_GET_MAJOR(RSI_ABI_VERSION),
 	RSI_ABI_VERSION_GET_MINOR(RSI_ABI_VERSION));
 }
+
 
 /*
  * This is the entry function for Realm payload, it first requests the shared buffer
@@ -71,6 +91,11 @@ void realm_payload_main(void)
 			realm_get_rsi_version();
 			test_succeed = true;
 			break;
+		case REALM_RSI_DEV_MEM:
+			rsi_delegate_dev_mem();
+			test_succeed = true;
+			break;
+			
 		default:
 			INFO("REALM_PAYLOAD: %s invalid cmd=%hhu", __func__, cmd);
 			break;
